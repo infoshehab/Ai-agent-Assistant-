@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AI Assistant">
+<meta name="theme-color" content="#1a1a2e">
+<title>AI Voice Assistant</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0f0f1a;--card:#1a1a2e;--card2:#16213e;
+  --accent:#7c6ff7;--accent2:#a78bfa;
+  --text:#f0f0f0;--muted:#8888aa;--border:#2a2a4a;
+  --user:#7c6ff7;--bot:#1e1e3a;
+  --success:#4ade80;--danger:#f87171;--warn:#fbbf24;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+
+/* ONBOARDING */
+#onboard{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center}
+.ob-avatar{font-size:64px;margin-bottom:1rem;animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.ob-title{font-size:22px;font-weight:700;color:var(--accent2);margin-bottom:0.5rem}
+.ob-sub{font-size:14px;color:var(--muted);margin-bottom:2rem;line-height:1.6}
+.ob-input{width:100%;max-width:300px;padding:14px 18px;border-radius:14px;border:1.5px solid var(--border);background:var(--card2);color:var(--text);font-size:16px;outline:none;text-align:center;margin-bottom:1rem}
+.ob-input:focus{border-color:var(--accent)}
+.ob-input::placeholder{color:var(--muted)}
+.ob-btn{padding:14px 40px;border-radius:14px;background:var(--accent);border:none;color:#fff;font-size:16px;font-weight:600;cursor:pointer;width:100%;max-width:300px}
+.ob-btn:active{opacity:0.85}
+.ob-skip{font-size:13px;color:var(--muted);margin-top:1rem;cursor:pointer;text-decoration:underline}
+
+/* MAIN APP */
+#mainApp{display:none;flex-direction:column;height:100vh;height:100dvh}
+.header{background:var(--card);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.h-avatar{width:38px;height:38px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.h-info .hname{font-size:14px;font-weight:600;color:var(--text)}
+.h-info .hstatus{font-size:11px;color:var(--success)}
+.h-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.settings-btn{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px}
+.user-badge{font-size:11px;background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;color:var(--accent2)}
+
+/* MESSAGES */
+.msgs{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px;scroll-behavior:smooth}
+.msgs::-webkit-scrollbar{width:3px}
+.msgs::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.msg{max-width:85%;animation:msgIn 0.2s ease}
+@keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.msg.u{align-self:flex-end}
+.msg.b{align-self:flex-start}
+.bub{padding:10px 14px;border-radius:18px;font-size:14px;line-height:1.55}
+.u .bub{background:var(--user);color:#fff;border-bottom-right-radius:4px}
+.b .bub{background:var(--bot);color:var(--text);border:1px solid var(--border);border-bottom-left-radius:4px}
+.mt{font-size:10px;color:var(--muted);margin-top:3px;padding:0 3px}
+.u .mt{text-align:right}
+.typing-bub{background:var(--bot);border:1px solid var(--border);border-radius:18px;border-bottom-left-radius:4px;padding:12px 16px;display:flex;gap:5px;align-items:center}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:dot 1.2s infinite}
+.dot:nth-child(2){animation-delay:.2s}
+.dot:nth-child(3){animation-delay:.4s}
+@keyframes dot{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+
+/* VOICE SECTION */
+.voice-sec{background:var(--card);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:16px;display:flex;flex-direction:column;align-items:center;gap:8px;flex-shrink:0}
+.wave-container{position:relative;width:80px;height:80px;display:flex;align-items:center;justify-content:center}
+.wave-ring{position:absolute;width:80px;height:80px;border-radius:50%;border:2px solid var(--accent);opacity:0;animation:none}
+.wave-ring.active{animation:wave 1.5s infinite}
+.wave-ring:nth-child(2){animation-delay:0.5s}
+.wave-ring:nth-child(3){animation-delay:1s}
+@keyframes wave{0%{transform:scale(0.8);opacity:0.6}100%{transform:scale(1.4);opacity:0}}
+.mic-core{width:64px;height:64px;border-radius:50%;background:var(--card2);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer;transition:all 0.2s;z-index:1;position:relative}
+.mic-core.listening{background:var(--danger);border-color:var(--danger)}
+.mic-core.speaking{background:var(--success);border-color:var(--success)}
+.mic-core.waiting{background:var(--accent);border-color:var(--accent)}
+.vstatus{font-size:12px;color:var(--muted);text-align:center}
+.vstatus.ok{color:var(--success)}
+.vstatus.err{color:var(--danger)}
+.always-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.toggle{position:relative;width:36px;height:20px;cursor:pointer}
+.toggle input{opacity:0;width:0;height:0}
+.slider{position:absolute;inset:0;background:var(--border);border-radius:20px;transition:.3s}
+.slider:before{content:'';position:absolute;width:14px;height:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s}
+input:checked+.slider{background:var(--accent)}
+input:checked+.slider:before{transform:translateX(16px)}
+
+/* QUICK CMDS */
+.quick{background:var(--card);padding:8px 14px;display:grid;grid-template-columns:1fr 1fr;gap:5px;flex-shrink:0}
+.qb{padding:7px 5px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--muted);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px}
+.qb:active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* INPUT */
+.inp-wrap{background:var(--card);padding:8px 14px 18px;display:flex;gap:8px;align-items:flex-end;flex-shrink:0}
+textarea{flex:1;min-height:40px;max-height:90px;resize:none;border:1px solid var(--border);border-radius:14px;padding:10px 13px;font-size:14px;font-family:inherit;color:var(--text);background:var(--card2);outline:none}
+textarea:focus{border-color:var(--accent)}
+.sbtn{width:40px;height:40px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.sbtn:disabled{opacity:0.4}
+
+/* BANNER */
+.banner{position:fixed;top:70px;left:16px;right:16px;background:#1a2a1a;border:1px solid var(--success);border-radius:12px;padding:10px 14px;font-size:13px;color:var(--success);display:none;align-items:center;gap:8px;z-index:50;animation:slideDown 0.3s ease}
+@keyframes slideDown{from{transform:translateY(-10px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* SETTINGS PANEL */
+#settingsPanel{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:none;align-items:flex-end}
+.settings-box{background:var(--card);border-radius:20px 20px 0 0;padding:20px;width:100%;animation:slideUp 0.3s ease}
+@keyframes slideUp{from{transform:translateY(40px)}to{transform:translateY(0)}}
+.s-title{font-size:16px;font-weight:600;margin-bottom:16px;color:var(--accent2)}
+.s-row{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.s-label{font-size:13px;color:var(--muted)}
+.s-input{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:14px;outline:none}
+.s-input:focus{border-color:var(--accent)}
+.s-save{padding:12px;border-radius:12px;background:var(--accent);border:none;color:#fff;font-size:14px;font-weight:600;cursor:pointer;width:100%}
+.s-close{padding:10px;border-radius:12px;border:1px solid var(--border);background:none;color:var(--muted);font-size:14px;cursor:pointer;width:100%;margin-top:8px}
+</style>
+</head>
+<body>
+
+<!-- ONBOARDING -->
+<div id="onboard">
+  <div class="ob-avatar">🤖</div>
+  <div class="ob-title">Tomar Personal AI</div>
+  <div class="ob-sub">Ami tomar voice assistant.<br>Tomar naam janale tomar naam dhorey dakbo!</div>
+  <input class="ob-input" id="nameInput" placeholder="Tomar naam likho..." maxlength="20" autofocus>
+  <button class="ob-btn" onclick="startApp()">Shuru kori 🚀</button>
+  <div class="ob-skip" onclick="startApp(true)">Naam chara shuru koro</div>
+</div>
+
+<!-- MAIN APP -->
+<div id="mainApp">
+  <div class="header">
+    <div class="h-avatar">🤖</div>
+    <div class="h-info">
+      <div class="hname">AI Assistant</div>
+      <div class="hstatus" id="hstatus">● Ready</div>
+    </div>
+    <div class="h-right">
+      <div class="user-badge" id="userBadge">👤 User</div>
+      <button class="settings-btn" onclick="openSettings()" title="Settings">⚙️</button>
+    </div>
+  </div>
+
+  <div class="msgs" id="msgs"></div>
+
+  <div class="voice-sec">
+    <div class="wave-container">
+      <div class="wave-ring" id="wr1"></div>
+      <div class="wave-ring" id="wr2"></div>
+      <div class="wave-ring" id="wr3"></div>
+      <div class="mic-core" id="micCore" onclick="toggleListen()">🎤</div>
+    </div>
+    <div class="vstatus" id="vstatus">Mic e tap kore bolun</div>
+    <div class="always-row">
+      <label class="toggle">
+        <input type="checkbox" id="alwaysOn" onchange="toggleAlwaysOn()">
+        <span class="slider"></span>
+      </label>
+      <span>Always listening (background e shune)</span>
+    </div>
+  </div>
+
+  <div class="quick" id="quickCmds">
+    <button class="qb" onclick="q('YouTube open koro')">▶️ YouTube</button>
+    <button class="qb" onclick="q('WhatsApp open koro')">💬 WhatsApp</button>
+    <button class="qb" onclick="q('Maps open koro')">🗺️ Maps</button>
+    <button class="qb" onclick="q('Weather dekhao')">🌤️ Weather</button>
+  </div>
+
+  <div class="inp-wrap">
+    <textarea id="ti" placeholder="Type o korte paro..." rows="1" onkeydown="hk(event)" oninput="ar(this)"></textarea>
+    <button class="sbtn" id="sb" onclick="send()">➤</button>
+  </div>
+</div>
+
+<!-- BANNER -->
+<div class="banner" id="banner">✅ <span id="bannerTxt"></span></div>
+
+<!-- SETTINGS -->
+<div id="settingsPanel" onclick="closeSettingsOutside(event)">
+  <div class="settings-box">
+    <div class="s-title">⚙️ Settings</div>
+    <div class="s-row">
+      <div class="s-label">Tomar naam</div>
+      <input class="s-input" id="sNameInput" placeholder="Naam likho...">
+    </div>
+    <div class="s-row">
+      <div class="s-label">Assistant er naam</div>
+      <input class="s-input" id="sAssistName" placeholder="e.g. Aria, Nova, Jarvis...">
+    </div>
+    <button class="s-save" onclick="saveSettings()">Save koro</button>
+    <button class="s-close" onclick="closeSettings()">Bondo koro</button>
+  </div>
+</div>
+
+<script>
+const SYS_TEMPLATE = (uname, aname) => `You are ${aname}, a personal AI voice assistant for ${uname}. You speak like a close friend — warm, natural, conversational. 
+
+CRITICAL RULES:
+1. Always address the user as "${uname}" naturally in conversation.
+2. Detect language from user's message (Bengali/Bangla, English, Hindi, German) and ALWAYS reply in that SAME language.
+3. Keep replies SHORT — 1-3 sentences max. You are a voice assistant, not a chatbot.
+4. Ask follow-up questions naturally like a human would. Show curiosity.
+5. Sound human — use natural pauses, "hmm", "acha", "dekhchi" etc. in Bangla.
+6. For greetings, greet back warmly using their name.
+
+FOR ACTIONS — append this JSON at the END of reply:
+ACTION:{"type":"open","target":"URL","name":"AppName"}
+ACTION:{"type":"call","number":"NUMBER","name":"Name"}
+
+App URLs: youtube→https://youtube.com, maps→https://maps.google.com, google→https://google.com, weather→https://weather.com, whatsapp→https://web.whatsapp.com, gmail→https://mail.google.com, facebook→https://facebook.com, instagram→https://instagram.com, calculator→https://www.calculatorsoup.com/calculators/math/basic.php, spotify→https://open.spotify.com, netflix→https://netflix.com
+
+EXAMPLE Bangla responses:
+- User: "Kemon acho?" → "${aname}: Ami valo, ${uname} bhai! Tumi kemon acho? Aj ki plan ache?"
+- User: "YouTube open koro" → "Sure ${uname}! Ekhuni open korchi. ACTION:{"type":"open","target":"https://youtube.com","name":"YouTube"}"
+- User: "Ekta joke bolo" → [tell a short funny joke in their language]`;
+
+let userName = '', assistName = 'Aria', hist = [], busy = false;
+let recog = null, listening = false, alwaysListening = false;
+let alwaysTimer = null;
+
+// ONBOARDING
+function startApp(skip) {
+  if (!skip) {
+    const n = document.getElementById('nameInput').value.trim();
+    userName = n || 'Bhai';
+  } else {
+    userName = 'Bhai';
+  }
+  localStorage.setItem('ai_username', userName);
+  localStorage.setItem('ai_assistname', assistName);
+  document.getElementById('onboard').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'flex';
+  initApp();
+}
+
+function initApp() {
+  userName = localStorage.getItem('ai_username') || userName || 'Bhai';
+  assistName = localStorage.getItem('ai_assistname') || 'Aria';
+  document.getElementById('userBadge').textContent = '👤 ' + userName;
+  document.getElementById('sNameInput').value = userName;
+  document.getElementById('sAssistName').value = assistName;
+  document.getElementById('hstatus').textContent = '● Ready';
+
+  const hour = new Date().getHours();
+  let greet = hour < 12 ? 'Shubho shokal' : hour < 17 ? 'Shubho dopur' : 'Shubho shondha';
+  const msg = `${greet}, ${userName}! 😊 Ami ${assistName} — tomar personal AI assistant. Bolo, ki help lagbe?`;
+  addMsg('b', msg);
+  speak(msg);
+}
+
+// Load saved data on page load
+window.onload = () => {
+  const saved = localStorage.getItem('ai_username');
+  if (saved) {
+    document.getElementById('onboard').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'flex';
+    initApp();
+  }
+  document.getElementById('nameInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') startApp();
+  });
+};
+
+// UI HELPERS
+function ar(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 90) + 'px'; }
+function hk(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }
+function q(t) { document.getElementById('ti').value = t; send(); }
+
+function addMsg(role, txt) {
+  const c = document.getElementById('msgs');
+  const d = document.createElement('div'); d.className = 'msg ' + (role === 'u' ? 'u' : 'b');
+  const b = document.createElement('div'); b.className = 'bub'; b.textContent = txt;
+  const m = document.createElement('div'); m.className = 'mt';
+  m.textContent = role === 'u' ? userName : assistName;
+  d.appendChild(b); d.appendChild(m); c.appendChild(d);
+  c.scrollTop = c.scrollHeight;
+}
+
+function showTyping() {
+  const c = document.getElementById('msgs');
+  const d = document.createElement('div'); d.className = 'msg b'; d.id = 'typing';
+  const t = document.createElement('div'); t.className = 'typing-bub';
+  t.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+  d.appendChild(t); c.appendChild(d); c.scrollTop = c.scrollHeight;
+}
+function removeTyping() { const el = document.getElementById('typing'); if (el) el.remove(); }
+
+function showBanner(t) {
+  const el = document.getElementById('banner');
+  document.getElementById('bannerTxt').textContent = t;
+  el.style.display = 'flex';
+  setTimeout(() => el.style.display = 'none', 4000);
+}
+
+function setMicState(state) {
+  const mc = document.getElementById('micCore');
+  const vs = document.getElementById('vstatus');
+  const hs = document.getElementById('hstatus');
+  const rings = [document.getElementById('wr1'), document.getElementById('wr2'), document.getElementById('wr3')];
+  mc.className = 'mic-core';
+  rings.forEach(r => r.classList.remove('active'));
+  if (state === 'idle') { mc.textContent = '🎤'; vs.textContent = 'Mic e tap kore bolun'; vs.className = 'vstatus'; hs.textContent = '● Ready'; }
+  else if (state === 'listening') { mc.classList.add('listening'); mc.textContent = '🔴'; rings.forEach(r => r.classList.add('active')); vs.textContent = 'Sunchi... bolun ' + userName + '!'; vs.className = 'vstatus ok'; hs.textContent = '● Listening...'; }
+  else if (state === 'thinking') { mc.classList.add('waiting'); mc.textContent = '💭'; vs.textContent = 'Vabchi...'; vs.className = 'vstatus'; hs.textContent = '● Thinking...'; }
+  else if (state === 'speaking') { mc.classList.add('speaking'); mc.textContent = '🔊'; rings.forEach(r => r.classList.add('active')); vs.textContent = assistName + ' bolche...'; vs.className = 'vstatus ok'; hs.textContent = '● Speaking...'; }
+  else if (state === 'always') { mc.classList.add('waiting'); mc.textContent = '👂'; vs.textContent = '"Hey ' + assistName + '" bole dako!'; vs.className = 'vstatus ok'; hs.textContent = '● Always listening'; }
+}
+
+// SPEECH SYNTHESIS
+function speak(text) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  const l = detectLang(text);
+  u.lang = l === 'BD' ? 'bn-BD' : l === 'IN' ? 'hi-IN' : l === 'DE' ? 'de-DE' : 'en-US';
+  u.rate = 0.92; u.pitch = 1.05;
+  setMicState('speaking');
+  u.onend = () => {
+    if (alwaysListening) { setTimeout(() => startAlwaysListen(), 500); }
+    else { setMicState('idle'); }
+  };
+  u.onerror = () => setMicState('idle');
+  window.speechSynthesis.speak(u);
+}
+
+// LANG DETECT
+function detectLang(txt) {
+  if (/[\u0980-\u09FF]/.test(txt)) return 'BD';
+  if (/[\u0900-\u097F]/.test(txt)) return 'IN';
+  if (/\b(ich|sie|der|die|das|und|ist|bitte|danke|hallo|wie|was)\b/i.test(txt)) return 'DE';
+  return 'EN';
+}
+
+// ACTION PARSE
+function parseAction(txt) {
+  const m = txt.match(/ACTION:(\{[^}]+\})/);
+  if (!m) return txt;
+  const clean = txt.replace(/ACTION:\{[^}]+\}/, '').trim();
+  try {
+    const a = JSON.parse(m[1]);
+    setTimeout(() => {
+      if (a.type === 'open' && a.target) { showBanner('Opening ' + a.name + '...'); window.open(a.target, '_blank'); }
+      else if (a.type === 'call') { showBanner('Calling ' + a.name + ' (' + a.number + ')... [Demo]'); }
+    }, 600);
+  } catch (e) {}
+  return clean;
+}
+
+// SEND MESSAGE
+async function send() {
+  const inp = document.getElementById('ti'), txt = inp.value.trim();
+  if (!txt || busy) return;
+  busy = true; inp.value = ''; inp.style.height = 'auto';
+  document.getElementById('sb').disabled = true;
+  addMsg('u', txt);
+  hist.push({ role: 'user', content: txt });
+  setMicState('thinking');
+  showTyping();
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        system: SYS_TEMPLATE(userName, assistName),
+        messages: hist.slice(-14)
+      })
+    });
+    const data = await r.json();
+    let rep = data.content?.map(b => b.text || '').join('') || 'Ektu somossa hoyeche, ' + userName + '. Abar bolo.';
+    const clean = parseAction(rep);
+    hist.push({ role: 'assistant', content: rep });
+    removeTyping(); addMsg('b', clean); speak(clean);
+  } catch (e) {
+    removeTyping();
+    const err = 'Net connection check koro, ' + userName + '. Abar try koro.';
+    addMsg('b', err); speak(err);
+    setMicState('idle');
+  }
+  busy = false; document.getElementById('sb').disabled = false;
+}
+
+// VOICE RECOGNITION
+function toggleListen() {
+  if (alwaysListening) { stopAlwaysListen(); return; }
+  if (listening) { recog && recog.stop(); return; }
+  startListening();
+}
+
+function startListening() {
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    document.getElementById('vstatus').textContent = 'Voice support nei. Chrome use koro.';
+    document.getElementById('vstatus').className = 'vstatus err';
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recog = new SR();
+  recog.continuous = false; recog.interimResults = true; recog.lang = 'bn-BD';
+  recog.onstart = () => { listening = true; setMicState('listening'); };
+  recog.onresult = (e) => {
+    let interim = '', final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    document.getElementById('ti').value = final || interim;
+    if (final) { const l = detectLang(final); recog.lang = l === 'BD' ? 'bn-BD' : l === 'IN' ? 'hi-IN' : l === 'DE' ? 'de-DE' : 'en-US'; }
+  };
+  recog.onend = () => {
+    listening = false;
+    const t = document.getElementById('ti').value.trim();
+    if (t) { send(); }
+    else if (!alwaysListening) { setMicState('idle'); }
+  };
+  recog.onerror = (e) => {
+    listening = false;
+    if (e.error !== 'no-speech') {
+      const vs = document.getElementById('vstatus');
+      vs.textContent = e.error === 'not-allowed' ? 'Mic permission dao!' : 'Error: ' + e.error;
+      vs.className = 'vstatus err';
+      setMicState('idle');
+    } else if (alwaysListening) {
+      setTimeout(() => startAlwaysListen(), 1000);
+    }
+  };
+  recog.start();
+}
+
+// ALWAYS LISTENING
+function toggleAlwaysOn() {
+  alwaysListening = document.getElementById('alwaysOn').checked;
+  if (alwaysListening) { startAlwaysListen(); }
+  else { stopAlwaysListen(); }
+}
+
+function startAlwaysListen() {
+  if (!alwaysListening || busy || window.speechSynthesis.speaking) return;
+  setMicState('always');
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return;
+  recog = new SR();
+  recog.continuous = false; recog.interimResults = false; recog.lang = 'bn-BD';
+  recog.onresult = (e) => {
+    const txt = e.results[0][0].transcript.toLowerCase();
+    const wakeWords = ['hey ' + assistName.toLowerCase(), 'হেই', 'এই', 'oi', 'ওই', assistName.toLowerCase()];
+    const isWake = wakeWords.some(w => txt.includes(w));
+    if (isWake) {
+      const ack = `Bolo ${userName}, ki lagbe?`;
+      addMsg('b', ack); speak(ack);
+      setTimeout(() => { if (alwaysListening) startListening(); }, 3500);
+    } else if (txt.length > 3) {
+      document.getElementById('ti').value = e.results[0][0].transcript;
+      send();
+    }
+  };
+  recog.onend = () => { listening = false; if (alwaysListening && !busy) setTimeout(() => startAlwaysListen(), 1500); };
+  recog.onerror = () => { listening = false; if (alwaysListening) setTimeout(() => startAlwaysListen(), 2000); };
+  try { recog.start(); listening = true; } catch (e) {}
+}
+
+function stopAlwaysListen() {
+  alwaysListening = false;
+  document.getElementById('alwaysOn').checked = false;
+  recog && recog.stop();
+  setMicState('idle');
+}
+
+// SETTINGS
+function openSettings() {
+  document.getElementById('sNameInput').value = userName;
+  document.getElementById('sAssistName').value = assistName;
+  document.getElementById('settingsPanel').style.display = 'flex';
+}
+function closeSettings() { document.getElementById('settingsPanel').style.display = 'none'; }
+function closeSettingsOutside(e) { if (e.target === document.getElementById('settingsPanel')) closeSettings(); }
+function saveSettings() {
+  const n = document.getElementById('sNameInput').value.trim();
+  const a = document.getElementById('sAssistName').value.trim();
+  if (n) userName = n;
+  if (a) assistName = a;
+  localStorage.setItem('ai_username', userName);
+  localStorage.setItem('ai_assistname', assistName);
+  document.getElementById('userBadge').textContent = '👤 ' + userName;
+  closeSettings();
+  showBanner('Settings save hoyeche!');
+  hist = [];
+  const msg = `Naam update hoyeche! Ekhon theke ami tomar naam ${userName} dhorey dakbo. 😊`;
+  addMsg('b', msg); speak(msg);
+}
+</script>
+</body>
+</html>
